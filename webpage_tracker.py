@@ -69,8 +69,23 @@ class WebpageTracker:
         """Extract site name from URL for folder naming."""
         try:
             parsed = urlparse(url)
-            site_name = parsed.netloc.replace('www.', '').replace('.', '_')
-            return site_name
+            domain = parsed.netloc.replace('www.', '').replace('.', '_')
+            
+            # Get the path and make it filesystem-safe
+            path = parsed.path.strip('/')
+            if path:
+                # Replace problematic characters in path
+                safe_path = path.replace('/', '_').replace('?', '_').replace('&', '_').replace('=', '_').replace('#', '_')
+                # Remove trailing underscores
+                safe_path = safe_path.rstrip('_')
+                # Limit path length
+                if len(safe_path) > 100:
+                    safe_path = safe_path[:100]
+                # Return domain/path structure
+                return f"{domain}/{safe_path}"
+            else:
+                # No path, just return domain
+                return domain
         except Exception as e:
             logger.error(f"Error parsing URL {url}: {e}")
             return "unknown_site"
@@ -99,8 +114,9 @@ class WebpageTracker:
     def save_webpage_version(self, site_name, html_content, date_str):
         """Save webpage version to file."""
         try:
+            # Handle hierarchical folder structure (domain/path)
             site_dir = self.webpage_versions_dir / site_name
-            site_dir.mkdir(exist_ok=True)
+            site_dir.mkdir(parents=True, exist_ok=True)
             
             file_path = site_dir / f"{date_str}.html"
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -149,9 +165,9 @@ class WebpageTracker:
                                              fromdesc=f"Previous version ({old_file.stem})",
                                              todesc=f"Current version ({new_file.stem})")
             
-            # Save diff
+            # Save diff with hierarchical structure
             diff_dir = self.diffs_dir / site_name
-            diff_dir.mkdir(exist_ok=True)
+            diff_dir.mkdir(parents=True, exist_ok=True)
             
             # Get the date of the previous version for the filename
             prev_date = old_file.stem
