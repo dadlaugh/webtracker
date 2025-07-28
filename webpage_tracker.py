@@ -91,14 +91,25 @@ class WebpageTracker:
             return "unknown_site"
     
     def fetch_webpage(self, url):
-        """Fetch webpage content with error handling."""
+        """Fetch webpage content with comprehensive asset handling."""
         try:
             logger.info(f"Fetching webpage: {url}")
             response = self.session.get(url, timeout=30)
             response.raise_for_status()
             
-            # Parse and prettify HTML
+            # Parse HTML
             soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Download and embed CSS files
+            self._download_and_embed_css(soup, url)
+            
+            # Download and embed JavaScript files
+            self._download_and_embed_js(soup, url)
+            
+            # Download and embed images (convert to base64)
+            self._download_and_embed_images(soup, url)
+            
+            # Prettify the enhanced HTML
             prettified_html = soup.prettify()
             
             logger.info(f"Successfully fetched {len(prettified_html)} characters from {url}")
@@ -110,6 +121,78 @@ class WebpageTracker:
         except Exception as e:
             logger.error(f"Error processing {url}: {e}")
             return None
+    
+    def _download_and_embed_css(self, soup, base_url):
+        """Download and embed CSS files inline."""
+        try:
+            for link in soup.find_all('link', rel='stylesheet'):
+                href = link.get('href')
+                if href:
+                    css_url = self._resolve_url(href, base_url)
+                    try:
+                        css_response = self.session.get(css_url, timeout=10)
+                        if css_response.status_code == 200:
+                            css_content = css_response.text
+                            # Create inline style tag
+                            style_tag = soup.new_tag('style')
+                            style_tag.string = css_content
+                            link.replace_with(style_tag)
+                            logger.debug(f"Embedded CSS: {css_url}")
+                    except Exception as e:
+                        logger.debug(f"Failed to embed CSS {css_url}: {e}")
+        except Exception as e:
+            logger.debug(f"Error processing CSS: {e}")
+    
+    def _download_and_embed_js(self, soup, base_url):
+        """Download and embed JavaScript files inline."""
+        try:
+            for script in soup.find_all('script', src=True):
+                src = script.get('src')
+                if src:
+                    js_url = self._resolve_url(src, base_url)
+                    try:
+                        js_response = self.session.get(js_url, timeout=10)
+                        if js_response.status_code == 200:
+                            js_content = js_response.text
+                            # Create inline script tag
+                            new_script = soup.new_tag('script')
+                            new_script.string = js_content
+                            script.replace_with(new_script)
+                            logger.debug(f"Embedded JS: {js_url}")
+                    except Exception as e:
+                        logger.debug(f"Failed to embed JS {js_url}: {e}")
+        except Exception as e:
+            logger.debug(f"Error processing JS: {e}")
+    
+    def _download_and_embed_images(self, soup, base_url):
+        """Download and embed images as base64."""
+        try:
+            import base64
+            for img in soup.find_all('img'):
+                src = img.get('src')
+                if src:
+                    img_url = self._resolve_url(src, base_url)
+                    try:
+                        img_response = self.session.get(img_url, timeout=10)
+                        if img_response.status_code == 200:
+                            # Convert to base64
+                            img_base64 = base64.b64encode(img_response.content).decode('utf-8')
+                            content_type = img_response.headers.get('content-type', 'image/png')
+                            img['src'] = f"data:{content_type};base64,{img_base64}"
+                            logger.debug(f"Embedded image: {img_url}")
+                    except Exception as e:
+                        logger.debug(f"Failed to embed image {img_url}: {e}")
+        except Exception as e:
+            logger.debug(f"Error processing images: {e}")
+    
+    def _resolve_url(self, relative_url, base_url):
+        """Resolve relative URLs to absolute URLs."""
+        try:
+            from urllib.parse import urljoin
+            return urljoin(base_url, relative_url)
+        except Exception as e:
+            logger.debug(f"Error resolving URL {relative_url}: {e}")
+            return relative_url
     
     def save_webpage_version(self, site_name, html_content, date_str):
         """Save webpage version to file."""
