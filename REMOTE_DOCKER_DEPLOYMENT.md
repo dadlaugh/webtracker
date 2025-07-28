@@ -1,12 +1,28 @@
 # Remote Docker Deployment Guide
 
-Simple guide to deploy your webpage tracker by building the Docker image directly on the remote server.
+Simple guide to deploy your webpage tracker with comprehensive asset archiving and web server for team access.
 
 ## 🎯 **Prerequisites**
 
 - Remote server with Docker installed
 - SSH access to the server
 - Git repository access (SSH key configured)
+
+## 🌟 **Enhanced Features**
+
+### **Comprehensive Webpage Archiving**
+- **CSS Embedding**: All stylesheets downloaded and embedded inline
+- **JavaScript Embedding**: All JS files downloaded and embedded inline  
+- **Image Embedding**: Images converted to base64 and embedded
+- **Complete Visual Preservation**: Pages saved exactly as they appear live
+- **Self-Contained Files**: No broken links or missing assets
+
+### **Team Access Web Interface**
+- **Beautiful Dashboard**: Professional interface for browsing files
+- **File Statistics**: Shows counts of versions, diffs, and domains
+- **Easy Navigation**: Browse versions, diffs, and logs
+- **Direct File Access**: Click to view any saved webpage
+- **Responsive Design**: Works on desktop and mobile devices
 
 ## 🚀 **Quick Deployment (5 minutes)**
 
@@ -53,6 +69,46 @@ docker run -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
            -v $(pwd)/webpage_versions:/app/webpage_versions \
            -v $(pwd)/diffs:/app/diffs \
            webpage-tracker
+```
+
+### **Step 6: Start Web Server (Optional)**
+
+#### **Option A: Docker Web Server (Recommended)**
+```bash
+# Start web server in Docker
+./start_web_server.sh
+
+# Or manually with Docker
+docker run -d \
+    --name webpage-web-server \
+    -p 8080:8080 \
+    -v "$(pwd)/webpage_versions:/app/webpage_versions:ro" \
+    -v "$(pwd)/diffs:/app/diffs:ro" \
+    -v "$(pwd)/logs:/app/logs:ro" \
+    -v "$(pwd)/web_server.py:/app/web_server.py:ro" \
+    webpage-tracker \
+    python web_server.py
+```
+
+#### **Option B: Docker Compose**
+```bash
+# Start web server only
+docker-compose --profile web up -d
+
+# Start both tracker and web server
+docker-compose --profile webtracker-full up -d
+```
+
+#### **Option C: Direct Python (Alternative)**
+```bash
+# Install Flask if not already installed
+pip3 install flask
+
+# Start web server for team access
+python3 web_server.py &
+
+# Access the web interface
+echo "Web server running at: http://$(hostname -I | awk '{print $1}'):8080"
 ```
 
 ## 🔄 **For Auto-Updates**
@@ -123,6 +179,10 @@ ls -la /opt/webtracker/webpage_versions/
 
 # Check diffs
 ls -la /opt/webtracker/diffs/
+
+# Check web server
+ps aux | grep web_server.py
+curl -s http://localhost:8080 | head -5
 ```
 
 ### **Manual Run**
@@ -136,6 +196,9 @@ docker run -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
            -v $(pwd)/webpage_versions:/app/webpage_versions \
            -v $(pwd)/diffs:/app/diffs \
            webpage-tracker
+
+# Start web server manually
+python3 web_server.py &
 ```
 
 ## 🔧 **Configuration**
@@ -147,6 +210,93 @@ nano /opt/webtracker/webpages.xlsx
 
 # Or copy from your local machine
 scp webpages.xlsx user@your-server-ip:/opt/webtracker/
+```
+
+### **Web Server Configuration**
+
+#### **Option A: Docker Web Server Service (Recommended)**
+```bash
+# Create systemd service for Docker web server
+sudo tee /etc/systemd/system/webtracker-web.service > /dev/null << 'EOF'
+[Unit]
+Description=Webpage Tracker Web Server (Docker)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=webtracker
+Group=webtracker
+WorkingDirectory=/opt/webtracker
+ExecStart=/opt/webtracker/start_web_server.sh
+ExecStop=/usr/bin/docker stop webpage-web-server
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start web server
+sudo systemctl daemon-reload
+sudo systemctl enable webtracker-web.service
+sudo systemctl start webtracker-web.service
+```
+
+#### **Option B: Docker Compose Service**
+```bash
+# Create systemd service for Docker Compose
+sudo tee /etc/systemd/system/webtracker-web.service > /dev/null << 'EOF'
+[Unit]
+Description=Webpage Tracker Web Server (Docker Compose)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=webtracker
+Group=webtracker
+WorkingDirectory=/opt/webtracker
+ExecStart=/usr/local/bin/docker-compose --profile web up -d
+ExecStop=/usr/local/bin/docker-compose --profile web down
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start web server
+sudo systemctl daemon-reload
+sudo systemctl enable webtracker-web.service
+sudo systemctl start webtracker-web.service
+```
+
+#### **Option C: Direct Python Service (Alternative)**
+```bash
+# Start web server on boot (optional)
+sudo tee /etc/systemd/system/webtracker-web.service > /dev/null << 'EOF'
+[Unit]
+Description=Webpage Tracker Web Server
+After=network.target
+
+[Service]
+Type=simple
+User=webtracker
+Group=webtracker
+WorkingDirectory=/opt/webtracker
+ExecStart=/usr/bin/python3 web_server.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start web server
+sudo systemctl daemon-reload
+sudo systemctl enable webtracker-web.service
+sudo systemctl start webtracker-web.service
 ```
 
 ### **Change Update Frequency**
@@ -181,6 +331,31 @@ docker images
 docker image prune -f
 ```
 
+### **Web Server Issues**
+```bash
+# Check web server status
+sudo systemctl status webtracker-web.service
+
+# Check web server logs
+sudo journalctl -u webtracker-web.service -f
+
+# Check Docker container status
+docker ps | grep webpage-web-server
+
+# Check Docker container logs
+docker logs webpage-web-server
+
+# Test web server manually
+cd /opt/webtracker
+./start_web_server.sh
+
+# Check if port 8080 is in use
+sudo netstat -tlnp | grep :8080
+
+# Restart web server container
+docker restart webpage-web-server
+```
+
 ### **Git Issues**
 ```bash
 # Test Git access
@@ -207,6 +382,9 @@ sudo chmod -R 755 /opt/webtracker
 # Stop auto-updates
 sudo systemctl stop webtracker-update.timer
 
+# Stop web server
+sudo systemctl stop webtracker-web.service
+
 # Stop all containers
 docker stop $(docker ps -q)
 
@@ -225,7 +403,33 @@ python3 create_sample_excel_simple.py && \
 docker run -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
            -v $(pwd)/webpage_versions:/app/webpage_versions \
            -v $(pwd)/diffs:/app/diffs \
+           webpage-tracker && \
+./start_web_server.sh
+```
+
+## 🚀 **Quick Start Commands**
+
+### **Run Tracker Only**
+```bash
+docker run -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
+           -v $(pwd)/webpage_versions:/app/webpage_versions \
+           -v $(pwd)/diffs:/app/diffs \
            webpage-tracker
+```
+
+### **Start Web Server Only**
+```bash
+./start_web_server.sh
+```
+
+### **Run Both (Docker Compose)**
+```bash
+docker-compose --profile webtracker-full up -d
+```
+
+### **Access Web Interface**
+```bash
+echo "Web interface: http://$(hostname -I | awk '{print $1}'):8080"
 ```
 
 This approach is simple, reliable, and gives you full control over the deployment process! 

@@ -5,14 +5,52 @@ services:
     build: .
     container_name: webpage-tracker
     volumes:
-      # Mount the Excel file
       - ./webpages.xlsx:/app/webpages.xlsx:ro
-      # Mount directories for persistent data
       - ./webpage_versions:/app/webpage_versions
       - ./diffs:/app/diffs
-      # Mount logs directory
       - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
-    # Run once and exit (for cron scheduling)
-    command: python webpage_tracker.py 
+    command: python webpage_tracker.py
+    profiles:
+      - tracker
+
+  web-server:
+    build: .
+    container_name: webpage-web-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./webpage_versions:/app/webpage_versions:ro
+      - ./diffs:/app/diffs:ro
+      - ./logs:/app/logs:ro
+      - ./web_server.py:/app/web_server.py:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python web_server.py
+    restart: unless-stopped
+    profiles:
+      - web
+
+  # Combined service that runs both tracker and web server
+  webtracker-full:
+    build: .
+    container_name: webtracker-full
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./webpages.xlsx:/app/webpages.xlsx:ro
+      - ./webpage_versions:/app/webpage_versions
+      - ./diffs:/app/diffs
+      - ./logs:/app/logs
+      - ./web_server.py:/app/web_server.py:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      sh -c "
+        echo 'Starting webpage tracker...' &&
+        python webpage_tracker.py &&
+        echo 'Starting web server...' &&
+        python web_server.py
+      "
+    restart: unless-stopped 
