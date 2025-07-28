@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Auto Update Script for Webpage Tracker
-# This script runs every 5 minutes to pull latest code and redeploy
+# This script runs every 5 minutes to check for Git changes and run tracker
+# Also runs webpage_tracker every morning at 9:00 AM
 
 # Configuration
 PROJECT_DIR="/opt/webtracker"
@@ -17,6 +18,7 @@ DEFAULT_ENVIRONMENT="production"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Function to log messages
@@ -85,7 +87,20 @@ check_environment() {
     return 0
 }
 
-# Function to check for changes
+# Function to check if it's 9:00 AM
+is_morning_run() {
+    local current_hour=$(date '+%H')
+    local current_minute=$(date '+%M')
+    
+    # Check if it's between 9:00 AM and 9:05 AM (allowing some flexibility)
+    if [ "$current_hour" = "09" ] && [ "$current_minute" -ge 0 ] && [ "$current_minute" -le 5 ]; then
+        return 0
+    fi
+    
+    return 1
+}
+
+# Function to check for Git changes
 check_for_changes() {
     cd "$PROJECT_DIR"
     
@@ -97,24 +112,21 @@ check_for_changes() {
     REMOTE_COMMIT=$(git rev-parse origin/$GIT_BRANCH)
     
     if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
-        log_message "${GREEN}New changes detected!${NC}"
+        log_message "${GREEN}New Git changes detected!${NC}"
         log_message "Local:  $LOCAL_COMMIT"
         log_message "Remote: $REMOTE_COMMIT"
         return 0
     else
-        log_message "No new changes detected"
+        log_message "No new Git changes detected"
         return 1
     fi
 }
 
-# Function to update and deploy
-update_and_deploy() {
+# Function to pull latest Git changes
+pull_latest_changes() {
     cd "$PROJECT_DIR"
     
-    log_message "${GREEN}Starting update process...${NC}"
-    
-    # Pull latest changes
-    log_message "Pulling latest code from Git..."
+    log_message "${BLUE}Pulling latest code from Git...${NC}"
     if ! git pull origin $GIT_BRANCH; then
         log_message "${RED}Failed to pull latest code${NC}"
         return 1
@@ -124,31 +136,10 @@ update_and_deploy() {
     NEW_COMMIT=$(git rev-parse HEAD)
     log_message "Updated to commit: $NEW_COMMIT"
     
-    # Stop existing containers
-    log_message "Stopping existing containers..."
-    docker-compose down
-    
-    # Clean up old images to save space
-    log_message "Cleaning up old Docker images..."
-    docker image prune -f
-    
-    # Build and start new containers
-    log_message "Building and starting new containers..."
-    if docker-compose up -d --build; then
-        log_message "${GREEN}Deployment completed successfully!${NC}"
-        
-        # Wait a moment and check container health
-        sleep 10
-        if docker-compose ps | grep -q "Up"; then
-            log_message "${GREEN}Container health check passed${NC}"
-        else
-            log_message "${RED}Container health check failed${NC}"
-            docker-compose logs --tail=20
-            return 1
-        fi
-    else
-        log_message "${RED}Deployment failed!${NC}"
-        docker-compose logs --tail=20
+    # Rebuild Docker image with latest code
+    log_message "Rebuilding Docker image with latest code..."
+    if ! docker build -t webpage-tracker .; then
+        log_message "${RED}Failed to rebuild Docker image${NC}"
         return 1
     fi
     
@@ -157,12 +148,19 @@ update_and_deploy() {
 
 # Function to run the webpage tracker
 run_tracker() {
-    log_message "Running webpage tracker..."
-    if docker run --rm -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
-                   -v $(pwd)/webpage_versions:/app/webpage_versions \
-                   -v $(pwd)/diffs:/app/diffs \
-                   webpage-tracker; then
+    local reason="$1"
+    log_message "${BLUE}Running webpage tracker ($reason)...${NC}"
+    
+    cd "$PROJECT_DIR"
+    
+    if docker run --rm \
+        -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
+        -v $(pwd)/webpage_versions:/app/webpage_versions \
+        -v $(pwd)/diffs:/app/diffs \
+        -v $(pwd)/logs:/app/logs \
+        webpage-tracker; then
         log_message "${GREEN}Webpage tracker completed successfully${NC}"
+        return 0
     else
         log_message "${RED}Webpage tracker failed${NC}"
         return 1
@@ -200,21 +198,38 @@ main() {
         exit 0
     fi
     
-    # Check for changes
-    if check_for_changes; then
-        # Update and deploy
-        if update_and_deploy; then
-            log_message "${GREEN}Update and deployment completed successfully${NC}"
-            
-            # Optionally run the tracker after deployment
-            # Uncomment the next line if you want to run tracker after each update
-            # run_tracker
+    # Check if it's morning run time (9:00 AM)
+    if is_morning_run; then
+        log_message "${GREEN}Morning run detected (9:00 AM) - running webpage tracker${NC}"
+        if run_tracker "morning_schedule"; then
+            log_message "${GREEN}Morning webpage tracker completed successfully${NC}"
         else
-            log_message "${RED}Update and deployment failed${NC}"
+            log_message "${RED}Morning webpage tracker failed${NC}"
+            exit 1
+        fi
+    fi
+    
+    # Check for Git changes
+    if check_for_changes; then
+        log_message "${GREEN}Git changes detected - updating and running tracker${NC}"
+        
+        # Pull latest changes and rebuild
+        if pull_latest_changes; then
+            log_message "${GREEN}Git update completed successfully${NC}"
+            
+            # Run tracker after Git changes
+            if run_tracker "git_changes"; then
+                log_message "${GREEN}Git-triggered webpage tracker completed successfully${NC}"
+            else
+                log_message "${RED}Git-triggered webpage tracker failed${NC}"
+                exit 1
+            fi
+        else
+            log_message "${RED}Git update failed${NC}"
             exit 1
         fi
     else
-        log_message "No updates needed"
+        log_message "No Git changes detected - no action needed"
     fi
     
     log_message "=== Auto Update Script Completed ==="

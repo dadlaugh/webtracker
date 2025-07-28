@@ -1,0 +1,38 @@
+FROM alpine:latest
+
+# Install required packages
+RUN apk add --no-cache \
+    bash \
+    git \
+    docker-cli \
+    curl \
+    tzdata \
+    cronie
+
+# Set timezone
+ENV TZ=UTC
+
+# Create app directory
+WORKDIR /app
+
+# Copy automation scripts
+COPY auto_update.sh /app/auto_update.sh
+COPY morning_tracker.sh /app/morning_tracker.sh
+COPY automation_entrypoint.sh /app/automation_entrypoint.sh
+
+# Make scripts executable
+RUN chmod +x /app/auto_update.sh /app/morning_tracker.sh /app/automation_entrypoint.sh
+
+# Create cron jobs
+RUN echo "0 9 * * * /app/morning_tracker.sh" > /etc/crontabs/root && \
+    echo "*/5 * * * * /app/auto_update.sh" >> /etc/crontabs/root
+
+# Expose port for health checks
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Start automation
+ENTRYPOINT ["/app/automation_entrypoint.sh"] 

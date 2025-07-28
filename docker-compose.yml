@@ -53,4 +53,24 @@ services:
         echo 'Starting web server...' &&
         python web_server.py
       "
-    restart: unless-stopped 
+    restart: unless-stopped
+
+  # Automation service for scheduled runs and Git change detection
+  automation:
+    build:
+      context: .
+      dockerfile: Dockerfile.automation
+    container_name: webtracker-automation
+    volumes:
+      - ./webpages.xlsx:/opt/webtracker/webpages.xlsx:ro
+      - ./webpage_versions:/opt/webtracker/webpage_versions
+      - ./diffs:/opt/webtracker/diffs
+      - ./logs:/opt/webtracker/logs
+      - ./auto_update.sh:/opt/webtracker/auto_update.sh:ro
+      - ./morning_tracker.sh:/opt/webtracker/morning_tracker.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    profiles:
+      - automation 
