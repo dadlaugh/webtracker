@@ -13,6 +13,9 @@ NC='\033[0m'
 
 echo -e "${GREEN}Starting Webpage Tracker Automation...${NC}"
 
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
     echo -e "${RED}Error: Docker is not running${NC}"

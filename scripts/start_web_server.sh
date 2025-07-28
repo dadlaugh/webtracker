@@ -7,6 +7,9 @@ set -e
 
 echo "🌐 Starting Webpage Tracker Web Server..."
 
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 # Build the Docker image if it doesn't exist
 if ! docker images | grep -q webpage-tracker; then
     echo "🔨 Building Docker image..."

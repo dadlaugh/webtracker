@@ -49,5 +49,6 @@ Thumbs.db
 *.temp
 
 # Example creation scripts
-create_example_diff.py
-create_more_examples.py 
+examples/create_example_diff.py
+examples/create_more_examples.py
+examples/create_sample_excel_simple.py 

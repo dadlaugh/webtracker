@@ -16,9 +16,9 @@ ENV TZ=UTC
 WORKDIR /app
 
 # Copy automation scripts
-COPY auto_update.sh /app/auto_update.sh
-COPY morning_tracker.sh /app/morning_tracker.sh
-COPY automation_entrypoint.sh /app/automation_entrypoint.sh
+COPY scripts/auto_update.sh /app/auto_update.sh
+COPY scripts/morning_tracker.sh /app/morning_tracker.sh
+COPY automation/automation_entrypoint.sh /app/automation_entrypoint.sh
 
 # Make scripts executable
 RUN chmod +x /app/auto_update.sh /app/morning_tracker.sh /app/automation_entrypoint.sh

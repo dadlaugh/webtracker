@@ -1,204 +1,187 @@
-# Webpage Change Tracker
+# 🌐 Webpage Tracker
 
-A complete system for tracking changes in webpages over time. This tool reads URLs from an Excel file, fetches webpage content daily, saves prettified HTML versions, and generates diffs between consecutive versions.
+A comprehensive system for tracking webpage changes, generating diffs, and providing team access through a web interface.
 
-## Features
-
-- **Excel Integration**: Reads URLs from `webpages.xlsx` file
-- **Daily Tracking**: Fetches and saves webpage content with date-based naming
-- **Diff Generation**: Creates HTML diffs between consecutive versions using `difflib.HtmlDiff`
-- **Docker Support**: Containerized deployment with persistent data
-- **Auto-Updates**: Automated daily execution via systemd timer
-- **Comprehensive Logging**: Detailed logs with timestamps and error handling
-- **Git Integration**: Version control ready with proper `.gitignore`
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 webtracker/
-├── webpage_tracker.py              # Main Python script
-├── requirements.txt                # Python dependencies
-├── Dockerfile                     # Docker container definition
-├── docker-compose.yml             # Docker Compose configuration
-├── .gitignore                    # Git ignore rules
-├── create_sample_excel_simple.py # Helper script to create sample Excel file
-├── auto_update.sh                # Auto-update script for remote server
-├── set_environment.sh            # Environment configuration script
-├── README.md                     # This file
-├── REMOTE_DOCKER_DEPLOYMENT.md   # Remote deployment guide
-├── webpages.xlsx                 # Excel file with URLs (create this)
-├── webpage_versions/             # Saved webpage versions (auto-created)
-├── diffs/                       # Generated diffs (auto-created)
-└── logs/                        # Log files (auto-created)
+├── 📄 Core Files
+│   ├── webpage_tracker.py      # Main tracking script
+│   ├── web_server.py           # Flask web server for team access
+│   ├── webpages.xlsx           # URL configuration file
+│   ├── requirements.txt        # Python dependencies
+│   └── Dockerfile              # Main application container
+│
+├── 📦 Docker & Deployment
+│   ├── docker-compose.yml      # Multi-service orchestration
+│   └── automation/
+│       ├── Dockerfile.automation    # Automation container
+│       └── automation_entrypoint.sh # Automation startup script
+│
+├── 🔧 Scripts
+│   ├── start_automation.sh     # Start automation container
+│   ├── start_web_server.sh     # Start web server
+│   ├── deploy.sh               # Quick deployment
+│   ├── set_environment.sh      # Environment configuration
+│   ├── auto_update.sh          # Git change detection
+│   └── morning_tracker.sh      # Daily morning runs
+│
+├── 📚 Documentation
+│   └── REMOTE_DOCKER_DEPLOYMENT.md  # Deployment guide
+│
+├── 🎯 Examples
+│   ├── create_example_diff.py      # Create sample diffs
+│   ├── create_more_examples.py     # Create additional examples
+│   └── create_sample_excel_simple.py # Create sample Excel file
+│
+├── 📊 Data Directories
+│   ├── webpage_versions/       # Saved webpage versions
+│   ├── diffs/                  # Generated diff files
+│   └── logs/                   # Application logs
+│
+└── 📋 Configuration
+    ├── .gitignore              # Git ignore rules
+    └── README.md               # This file
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-### 1. Create Sample Excel File
-
-```bash
-python3 create_sample_excel_simple.py
-```
-
-This creates a `webpages.xlsx` file with sample URLs. Edit this file to add your own URLs.
-
-### 2. Run Locally
-
+### **Local Development**
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the tracker
+# Run tracker
 python webpage_tracker.py
+
+# Start web server
+python web_server.py
 ```
 
-### 3. Run with Docker
-
+### **Docker Development**
 ```bash
-# Build and run with Docker
-docker build -t webpage-tracker .
-docker run -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
-           -v $(pwd)/webpage_versions:/app/webpage_versions \
-           -v $(pwd)/diffs:/app/diffs \
-           webpage-tracker
+# Run tracker only
+docker-compose --profile tracker up
 
-# Or use Docker Compose
-docker-compose up --build
+# Start web server
+./scripts/start_web_server.sh
+
+# Start automation (morning runs + Git detection)
+./scripts/start_automation.sh
 ```
 
-## Remote Server Deployment
-
-For production deployment on a remote server, see the comprehensive guide:
-
-**[📖 REMOTE_DOCKER_DEPLOYMENT.md](REMOTE_DOCKER_DEPLOYMENT.md)**
-
-This guide covers:
-- Building Docker image on remote server
-- Setting up auto-updates every 5 minutes
-- Monitoring and troubleshooting
-- Environment configuration
-
-## Excel File Format
-
-The `webpages.xlsx` file must contain a column named `URL`. Additional columns are optional:
-
-| URL | Name | Description |
-|-----|------|-------------|
-| https://example.com | Example Site | Basic example site |
-| https://google.com | Google | Search engine |
-
-## Output Structure
-
-### Webpage Versions
-```
-webpage_versions/
-├── example_com/
-│   ├── 2024-01-15.html
-│   ├── 2024-01-16.html
-│   └── 2024-01-17.html
-└── google_com/
-    ├── 2024-01-15.html
-    └── 2024-01-16.html
-```
-
-### Diffs
-```
-diffs/
-├── example_com/
-│   ├── diff_2024-01-15_to_2024-01-16.html
-│   └── diff_2024-01-16_to_2024-01-17.html
-└── google_com/
-    └── diff_2024-01-15_to_2024-01-16.html
-```
-
-## Environment Configuration
-
-The system supports environment-based configuration:
-
+### **Full Stack (Tracker + Web Server)**
 ```bash
-# Set environment (production = auto-updates enabled, development = disabled)
-./set_environment.sh production
-./set_environment.sh development
-
-# Check current environment
-./set_environment.sh
+docker-compose --profile webtracker-full up -d
 ```
 
-## Logging
+## 🎯 Features
 
-The system provides comprehensive logging:
-- Console output with real-time status
-- Log file: `webpage_tracker.log`
-- Error handling for failed requests
-- Success/failure summaries
+### **Core Functionality**
+- **Webpage Tracking**: Fetches and saves webpage versions
+- **Diff Generation**: Creates HTML diffs showing changes
+- **Comprehensive Archiving**: Embeds CSS, JS, and images inline
+- **Hierarchical Storage**: Organizes files by domain/path structure
 
-## Error Handling
+### **Automation**
+- **Morning Runs**: Daily execution at 9:00 AM
+- **Git Integration**: Automatic runs on code changes
+- **Environment Protection**: Won't run in development
+- **Health Monitoring**: Built-in health checks
 
-The system handles various error scenarios:
-- Missing Excel file
-- Invalid URLs
-- Network timeouts
-- Permission errors
-- Missing directories
+### **Team Access**
+- **Web Interface**: Browse versions and diffs
+- **Tree Navigation**: Hierarchical file display
+- **Search & Filter**: Easy file discovery
+- **Responsive Design**: Works on all devices
 
-## Dependencies
+## 🔧 Configuration
 
-- **Python 3.11+**
-- **requests**: HTTP requests
-- **beautifulsoup4**: HTML parsing and prettification
-- **pandas**: Excel file reading
-- **openpyxl**: Excel file support
-- **lxml**: XML/HTML parser
+### **URL Configuration**
+Edit `webpages.xlsx` to add/remove URLs to track:
+- **URL**: Full webpage URL
+- **Name**: Optional display name
+- **Active**: Enable/disable tracking
 
-## Docker Commands
-
+### **Environment Setup**
 ```bash
-# Build image
-docker build -t webpage-tracker .
-
-# Run container
-docker run -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
-           -v $(pwd)/webpage_versions:/app/webpage_versions \
-           -v $(pwd)/diffs:/app/diffs \
-           webpage-tracker
-
-# Run with Docker Compose
-docker-compose up --build
-
-# Run in background
-docker-compose up -d --build
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
+# Set environment (production/development)
+./scripts/set_environment.sh production
 ```
 
-## Troubleshooting
+### **Docker Services**
+- **`webpage-tracker`**: One-time tracking execution
+- **`web-server`**: Flask web interface
+- **`automation`**: Scheduled runs and Git detection
+- **`webtracker-full`**: Combined tracker + web server
 
-### Common Issues
+## 📊 Monitoring
 
-1. **Excel file not found**: Ensure `webpages.xlsx` exists in the project directory
-2. **Permission errors**: Check directory permissions for `webpage_versions/` and `diffs/`
-3. **Network timeouts**: Some websites may block automated requests
-4. **Docker volume mounts**: Ensure paths are correct for your OS
-
-### Debug Mode
-
-Run with verbose logging:
+### **Logs**
 ```bash
-python webpage_tracker.py 2>&1 | tee debug.log
+# View application logs
+tail -f logs/webpage_tracker.log
+
+# View automation logs
+docker-compose --profile automation logs -f
+
+# View web server logs
+docker logs webpage-web-server
 ```
 
-## Contributing
+### **Health Checks**
+```bash
+# Check automation health
+curl http://localhost:8080/health
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+# Check web server
+curl http://localhost:8080
+```
 
-## License
+## 🚀 Deployment
+
+### **Remote Server Deployment**
+See `docs/REMOTE_DOCKER_DEPLOYMENT.md` for detailed instructions.
+
+### **Quick Deployment**
+```bash
+# Deploy to remote server
+./scripts/deploy.sh
+
+# Or manual deployment
+git pull origin main
+docker-compose --profile automation up -d --build
+```
+
+## 🎯 Use Cases
+
+- **Website Monitoring**: Track changes to important websites
+- **Content Verification**: Ensure content hasn't been modified
+- **Team Collaboration**: Share webpage versions with team
+- **Change Detection**: Get notified of webpage changes
+- **Archive Management**: Maintain historical webpage versions
+
+## 🔍 Troubleshooting
+
+### **Common Issues**
+1. **Docker not running**: Ensure Docker daemon is started
+2. **Permission errors**: Check file permissions and Docker socket access
+3. **Port conflicts**: Change ports in docker-compose.yml
+4. **Environment issues**: Verify .environment file configuration
+
+### **Log Analysis**
+```bash
+# Check automation status
+docker-compose --profile automation ps
+
+# View recent logs
+docker-compose --profile automation logs --tail=50
+
+# Check cron jobs
+docker exec webtracker-automation crontab -l
+```
+
+## 📝 License
 
 This project is open source and available under the MIT License. 
