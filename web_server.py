@@ -42,6 +42,65 @@ def list_html_files(directory):
                     files.append(get_file_info(file_path))
     return sorted(files, key=lambda x: x['modified'], reverse=True)
 
+def build_directory_tree(directory):
+    """Build a hierarchical tree structure for a directory."""
+    tree = {}
+    if os.path.exists(directory):
+        for root, dirs, filenames in os.walk(directory):
+            # Get relative path from base directory
+            rel_path = os.path.relpath(root, directory)
+            if rel_path == '.':
+                rel_path = ''
+            
+            # Create path components
+            path_parts = rel_path.split(os.sep) if rel_path else []
+            
+            # Navigate to the correct level in the tree
+            current_level = tree
+            for part in path_parts:
+                if part not in current_level:
+                    current_level[part] = {'files': [], 'subdirs': {}}
+                current_level = current_level[part]['subdirs']
+            
+            # Add files to current level
+            for filename in filenames:
+                if filename.endswith('.html'):
+                    file_path = Path(root) / filename
+                    file_info = get_file_info(file_path)
+                    current_level[filename] = file_info
+    
+    return tree
+
+def render_tree_html(tree, base_path='', level=0):
+    """Render the directory tree as HTML."""
+    html = ''
+    indent = '  ' * level
+    
+    for name, content in sorted(tree.items()):
+        if isinstance(content, dict) and 'files' in content:
+            # This is a directory
+            html += f'{indent}<div class="tree-folder">\n'
+            html += f'{indent}  <div class="tree-folder-header" onclick="toggleFolder(this)">\n'
+            html += f'{indent}    <span class="tree-icon">📁</span>\n'
+            html += f'{indent}    <span class="tree-name">{name}</span>\n'
+            html += f'{indent}  </div>\n'
+            html += f'{indent}  <div class="tree-folder-content">\n'
+            html += render_tree_html(content['subdirs'], f"{base_path}/{name}" if base_path else name, level + 1)
+            html += f'{indent}  </div>\n'
+            html += f'{indent}</div>\n'
+        else:
+            # This is a file
+            file_info = content
+            html += f'{indent}<div class="tree-file">\n'
+            html += f'{indent}  <div class="tree-file-header">\n'
+            html += f'{indent}    <span class="tree-icon">📄</span>\n'
+            html += f'{indent}    <a href="/file/{file_info["path"]}" target="_blank" class="tree-name">{name}</a>\n'
+            html += f'{indent}    <span class="tree-info">📏 {file_info["size"]} | 🕒 {file_info["modified"]}</span>\n'
+            html += f'{indent}  </div>\n'
+            html += f'{indent}</div>\n'
+    
+    return html
+
 @app.route('/')
 def index():
     """Main dashboard page."""
@@ -153,8 +212,9 @@ def index():
 
 @app.route('/versions')
 def versions():
-    """List all webpage versions."""
-    files = list_html_files(WEBPAGE_VERSIONS_DIR)
+    """List all webpage versions in tree structure."""
+    tree = build_directory_tree(WEBPAGE_VERSIONS_DIR)
+    tree_html = render_tree_html(tree)
     
     html = '''
     <!DOCTYPE html>
@@ -163,46 +223,113 @@ def versions():
         <title>Webpage Versions</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             h1 { color: #333; }
             .back-link { margin-bottom: 20px; }
             .back-link a { color: #007bff; text-decoration: none; }
-            .file-list { list-style: none; padding: 0; }
-            .file-item { padding: 15px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 5px; background: #f9f9f9; }
-            .file-item:hover { background: #f0f0f0; }
-            .file-name { font-weight: bold; color: #007bff; }
-            .file-info { color: #666; font-size: 0.9em; margin-top: 5px; }
+            
+            .tree-container { 
+                background: #f8f9fa; 
+                border: 1px solid #dee2e6; 
+                border-radius: 8px; 
+                padding: 20px; 
+                font-family: 'Courier New', monospace; 
+                font-size: 14px; 
+                line-height: 1.6; 
+            }
+            
+            .tree-folder { margin: 5px 0; }
+            .tree-folder-header { 
+                cursor: pointer; 
+                padding: 8px 12px; 
+                background: #e9ecef; 
+                border-radius: 4px; 
+                margin: 2px 0; 
+                display: flex; 
+                align-items: center; 
+                transition: background 0.2s; 
+            }
+            .tree-folder-header:hover { background: #dee2e6; }
+            .tree-folder-content { 
+                margin-left: 20px; 
+                border-left: 2px solid #dee2e6; 
+                padding-left: 15px; 
+            }
+            
+            .tree-file { margin: 5px 0; }
+            .tree-file-header { 
+                padding: 8px 12px; 
+                background: #f8f9fa; 
+                border-radius: 4px; 
+                margin: 2px 0; 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between; 
+                transition: background 0.2s; 
+            }
+            .tree-file-header:hover { background: #e9ecef; }
+            
+            .tree-icon { margin-right: 8px; font-size: 16px; }
+            .tree-name { 
+                color: #007bff; 
+                text-decoration: none; 
+                font-weight: 500; 
+                flex-grow: 1; 
+            }
+            .tree-name:hover { text-decoration: underline; }
+            .tree-info { 
+                color: #6c757d; 
+                font-size: 12px; 
+                margin-left: 10px; 
+            }
+            
+            .folder-collapsed .tree-folder-content { display: none; }
+            .folder-collapsed .tree-icon { content: "📂"; }
         </style>
+        <script>
+            function toggleFolder(element) {
+                const folder = element.parentElement;
+                folder.classList.toggle('folder-collapsed');
+                
+                // Change icon
+                const icon = element.querySelector('.tree-icon');
+                if (folder.classList.contains('folder-collapsed')) {
+                    icon.textContent = '📂';
+                } else {
+                    icon.textContent = '📁';
+                }
+            }
+            
+            // Expand all folders by default
+            window.onload = function() {
+                const folders = document.querySelectorAll('.tree-folder');
+                folders.forEach(folder => {
+                    folder.classList.remove('folder-collapsed');
+                });
+            }
+        </script>
     </head>
     <body>
         <div class="container">
             <div class="back-link">
                 <a href="/">← Back to Dashboard</a>
             </div>
-            <h1>📄 Webpage Versions ({{ files|length }} files)</h1>
-            <ul class="file-list">
-                {% for file in files %}
-                <li class="file-item">
-                    <div class="file-name">
-                        <a href="/file/{{ file.path }}" target="_blank">{{ file.name }}</a>
-                    </div>
-                    <div class="file-info">
-                        📁 {{ file.path }} | 📏 {{ file.size }} | 🕒 {{ file.modified }}
-                    </div>
-                </li>
-                {% endfor %}
-            </ul>
+            <h1>📄 Webpage Versions</h1>
+            <div class="tree-container">
+                {{ tree_html | safe }}
+            </div>
         </div>
     </body>
     </html>
     '''
     
-    return render_template_string(html, files=files)
+    return render_template_string(html, tree_html=tree_html)
 
 @app.route('/diffs')
 def diffs():
-    """List all diff files."""
-    files = list_html_files(DIFFS_DIR)
+    """List all diff files in tree structure."""
+    tree = build_directory_tree(DIFFS_DIR)
+    tree_html = render_tree_html(tree)
     
     html = '''
     <!DOCTYPE html>
@@ -211,41 +338,107 @@ def diffs():
         <title>Diff Files</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             h1 { color: #333; }
             .back-link { margin-bottom: 20px; }
             .back-link a { color: #007bff; text-decoration: none; }
-            .file-list { list-style: none; padding: 0; }
-            .file-item { padding: 15px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 5px; background: #f9f9f9; }
-            .file-item:hover { background: #f0f0f0; }
-            .file-name { font-weight: bold; color: #007bff; }
-            .file-info { color: #666; font-size: 0.9em; margin-top: 5px; }
+            
+            .tree-container { 
+                background: #f8f9fa; 
+                border: 1px solid #dee2e6; 
+                border-radius: 8px; 
+                padding: 20px; 
+                font-family: 'Courier New', monospace; 
+                font-size: 14px; 
+                line-height: 1.6; 
+            }
+            
+            .tree-folder { margin: 5px 0; }
+            .tree-folder-header { 
+                cursor: pointer; 
+                padding: 8px 12px; 
+                background: #e9ecef; 
+                border-radius: 4px; 
+                margin: 2px 0; 
+                display: flex; 
+                align-items: center; 
+                transition: background 0.2s; 
+            }
+            .tree-folder-header:hover { background: #dee2e6; }
+            .tree-folder-content { 
+                margin-left: 20px; 
+                border-left: 2px solid #dee2e6; 
+                padding-left: 15px; 
+            }
+            
+            .tree-file { margin: 5px 0; }
+            .tree-file-header { 
+                padding: 8px 12px; 
+                background: #f8f9fa; 
+                border-radius: 4px; 
+                margin: 2px 0; 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between; 
+                transition: background 0.2s; 
+            }
+            .tree-file-header:hover { background: #e9ecef; }
+            
+            .tree-icon { margin-right: 8px; font-size: 16px; }
+            .tree-name { 
+                color: #007bff; 
+                text-decoration: none; 
+                font-weight: 500; 
+                flex-grow: 1; 
+            }
+            .tree-name:hover { text-decoration: underline; }
+            .tree-info { 
+                color: #6c757d; 
+                font-size: 12px; 
+                margin-left: 10px; 
+            }
+            
+            .folder-collapsed .tree-folder-content { display: none; }
+            .folder-collapsed .tree-icon { content: "📂"; }
         </style>
+        <script>
+            function toggleFolder(element) {
+                const folder = element.parentElement;
+                folder.classList.toggle('folder-collapsed');
+                
+                // Change icon
+                const icon = element.querySelector('.tree-icon');
+                if (folder.classList.contains('folder-collapsed')) {
+                    icon.textContent = '📂';
+                } else {
+                    icon.textContent = '📁';
+                }
+            }
+            
+            // Expand all folders by default
+            window.onload = function() {
+                const folders = document.querySelectorAll('.tree-folder');
+                folders.forEach(folder => {
+                    folder.classList.remove('folder-collapsed');
+                });
+            }
+        </script>
     </head>
     <body>
         <div class="container">
             <div class="back-link">
                 <a href="/">← Back to Dashboard</a>
             </div>
-            <h1>🔍 Diff Files ({{ files|length }} files)</h1>
-            <ul class="file-list">
-                {% for file in files %}
-                <li class="file-item">
-                    <div class="file-name">
-                        <a href="/file/{{ file.path }}" target="_blank">{{ file.name }}</a>
-                    </div>
-                    <div class="file-info">
-                        📁 {{ file.path }} | 📏 {{ file.size }} | 🕒 {{ file.modified }}
-                    </div>
-                </li>
-                {% endfor %}
-            </ul>
+            <h1>🔍 Diff Files</h1>
+            <div class="tree-container">
+                {{ tree_html | safe }}
+            </div>
         </div>
     </body>
     </html>
     '''
     
-    return render_template_string(html, files=files)
+    return render_template_string(html, tree_html=tree_html)
 
 @app.route('/logs')
 def logs():

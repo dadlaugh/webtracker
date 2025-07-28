@@ -46,4 +46,8 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Example creation scripts
+create_example_diff.py
+create_more_examples.py 
