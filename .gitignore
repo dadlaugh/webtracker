@@ -26,7 +26,7 @@ ENV/
 *.log
 logs/
 
-# Excel files
+# Excel files (keep template, ignore user data)
 *.xlsx
 *.xls
 

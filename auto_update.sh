@@ -158,7 +158,10 @@ update_and_deploy() {
 # Function to run the webpage tracker
 run_tracker() {
     log_message "Running webpage tracker..."
-    if docker-compose run --rm webpage-tracker python webpage_tracker.py; then
+    if docker run --rm -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
+                   -v $(pwd)/webpage_versions:/app/webpage_versions \
+                   -v $(pwd)/diffs:/app/diffs \
+                   webpage-tracker; then
         log_message "${GREEN}Webpage tracker completed successfully${NC}"
     else
         log_message "${RED}Webpage tracker failed${NC}"
