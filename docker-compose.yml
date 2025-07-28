@@ -14,6 +14,5 @@ services:
       - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
-    restart: unless-stopped
     # Run once and exit (for cron scheduling)
     command: python webpage_tracker.py 
