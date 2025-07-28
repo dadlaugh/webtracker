@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  webpage-tracker:
+    build: .
+    container_name: webpage-tracker
+    volumes:
+      # Mount the Excel file
+      - ./webpages.xlsx:/app/webpages.xlsx:ro
+      # Mount directories for persistent data
+      - ./webpage_versions:/app/webpage_versions
+      - ./diffs:/app/diffs
+      # Mount logs directory
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    # Run once and exit (for cron scheduling)
+    command: python webpage_tracker.py 
