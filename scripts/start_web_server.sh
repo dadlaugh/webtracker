@@ -10,10 +10,11 @@ echo "🌐 Starting Webpage Tracker Web Server..."
 # Change to project root directory
 cd "$(dirname "$0")/.."
 
-# Build the Docker image if it doesn't exist
-if ! docker images | grep -q webpage-tracker; then
-    echo "🔨 Building Docker image..."
-    docker build -t webpage-tracker .
+# Always build the Docker image to ensure it's up to date
+echo "🔨 Building Docker image..."
+if ! docker build -t webpage-tracker .; then
+    echo "❌ Failed to build Docker image"
+    exit 1
 fi
 
 # Stop any existing web server container
@@ -23,7 +24,7 @@ docker rm webpage-web-server 2>/dev/null || true
 
 # Start the web server container
 echo "🚀 Starting web server container..."
-docker run -d \
+if ! docker run -d \
     --name webpage-web-server \
     -p 8080:8080 \
     -v "$(pwd)/webpage_versions:/app/webpage_versions:ro" \
@@ -32,11 +33,14 @@ docker run -d \
     -v "$(pwd)/web_server.py:/app/web_server.py:ro" \
     -e PYTHONUNBUFFERED=1 \
     webpage-tracker \
-    python web_server.py
+    python web_server.py; then
+    echo "❌ Failed to start web server container"
+    exit 1
+fi
 
 # Wait for the server to start
 echo "⏳ Waiting for web server to start..."
-sleep 3
+sleep 5
 
 # Check if the server is running
 if curl -s http://localhost:8080 > /dev/null; then
