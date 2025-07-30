@@ -32,28 +32,20 @@ services:
     profiles:
       - web
 
-  # Combined service that runs both tracker and web server
-  webtracker-full:
+  # Tracker service (one-time execution)
+  tracker:
     build: .
-    container_name: webtracker-full
-    ports:
-      - "8080:8080"
+    container_name: webpage-tracker
     volumes:
       - ./webpagesv2.xlsx:/app/webpages.xlsx:ro
       - ./webpage_versions:/app/webpage_versions
       - ./diffs:/app/diffs
       - ./logs:/app/logs
-      - ./web_server.py:/app/web_server.py:ro
     environment:
       - PYTHONUNBUFFERED=1
-    command: >
-      sh -c "
-        echo 'Starting webpage tracker...' &&
-        python webpage_tracker.py &&
-        echo 'Starting web server...' &&
-        python web_server.py
-      "
-    restart: unless-stopped
+    command: python webpage_tracker.py
+    profiles:
+      - tracker
 
   # Automation service for scheduled runs and Git change detection
   automation:
