@@ -242,8 +242,63 @@ class WebpageTracker:
             logger.error(f"Error getting previous version: {e}")
             return None
     
+    def extract_text_content(self, html_content):
+        """Extract clean, readable text content from HTML."""
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove script and style elements
+            for script in soup(["script", "style", "noscript"]):
+                script.decompose()
+            
+            # Extract text from meaningful elements
+            text_sections = []
+            
+            # Get title
+            title = soup.find('title')
+            if title and title.get_text().strip():
+                text_sections.append(f"TITLE: {title.get_text().strip()}")
+            
+            # Get headings (h1-h6)
+            for i in range(1, 7):
+                headings = soup.find_all(f'h{i}')
+                for heading in headings:
+                    text = heading.get_text().strip()
+                    if text:
+                        text_sections.append(f"H{i}: {text}")
+            
+            # Get paragraphs
+            paragraphs = soup.find_all('p')
+            for p in paragraphs:
+                text = p.get_text().strip()
+                if text and len(text) > 10:  # Only meaningful paragraphs
+                    text_sections.append(f"PARAGRAPH: {text}")
+            
+            # Get list items
+            lists = soup.find_all(['ul', 'ol'])
+            for lst in lists:
+                items = lst.find_all('li')
+                for item in items:
+                    text = item.get_text().strip()
+                    if text:
+                        text_sections.append(f"LIST ITEM: {text}")
+            
+            # Get navigation links (if they have meaningful text)
+            nav_links = soup.find_all('a')
+            for link in nav_links:
+                text = link.get_text().strip()
+                href = link.get('href', '')
+                if text and len(text) > 2 and not text.startswith('http'):
+                    text_sections.append(f"LINK: {text} ({href})")
+            
+            return text_sections
+            
+        except Exception as e:
+            logger.error(f"Error extracting text content: {e}")
+            return []
+
     def generate_diff(self, site_name, old_file, new_file, date_str):
-        """Generate HTML diff between two webpage versions."""
+        """Generate readable text diff between two webpage versions."""
         try:
             # Create diff directory for this site
             site_diff_dir = self.diffs_dir / site_name
@@ -251,28 +306,199 @@ class WebpageTracker:
             
             # Read old and new files
             with open(old_file, 'r', encoding='utf-8') as f:
-                old_content = f.readlines()
+                old_html = f.read()
             
             with open(new_file, 'r', encoding='utf-8') as f:
-                new_content = f.readlines()
+                new_html = f.read()
             
-            # Generate diff
+            # Extract text content
+            old_text_sections = self.extract_text_content(old_html)
+            new_text_sections = self.extract_text_content(new_html)
+            
+            # Generate text diff
             diff = HtmlDiff()
-            diff_html = diff.make_file(old_content, new_content, 
-                                     fromdesc=f"Version {Path(old_file).stem}",
-                                     todesc=f"Version {date_str}")
+            diff_html = diff.make_file(old_text_sections, new_text_sections,
+                                     fromdesc=f"Version {Path(old_file).stem} (Text Content)",
+                                     todesc=f"Version {date_str} (Text Content)")
+            
+            # Create enhanced diff with better styling
+            enhanced_diff_html = self.create_enhanced_diff_html(
+                diff_html, site_name, old_file, new_file, date_str,
+                len(old_text_sections), len(new_text_sections)
+            )
             
             # Save diff file
             diff_file = site_diff_dir / f"diff_{Path(old_file).stem}_to_{date_str}.html"
             with open(diff_file, 'w', encoding='utf-8') as f:
-                f.write(diff_html)
+                f.write(enhanced_diff_html)
             
-            logger.info(f"Generated diff: {diff_file}")
+            logger.info(f"Generated text diff: {diff_file}")
             return diff_file
             
         except Exception as e:
             logger.error(f"Error generating diff: {e}")
             return None
+
+    def create_enhanced_diff_html(self, diff_html, site_name, old_file, new_file, date_str, old_count, new_count):
+        """Create enhanced diff HTML with better styling and context."""
+        enhanced_html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Content Diff - {site_name}</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 24px;
+        }}
+        .header p {{
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }}
+        .stats {{
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }}
+        .stat-card {{
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+        }}
+        .stat-card h3 {{
+            margin: 0 0 10px 0;
+            color: #333;
+        }}
+        .stat-card .number {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }}
+        .diff-container {{
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }}
+        .diff {{
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }}
+        .diff .diff_header {{
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }}
+        .diff .diff_next {{
+            background-color: #e8f5e8;
+            color: #2d5a2d;
+        }}
+        .diff .diff_sub {{
+            background-color: #ffeaea;
+            color: #8b0000;
+        }}
+        .diff .diff_chg {{
+            background-color: #fff3cd;
+            color: #856404;
+        }}
+        .legend {{
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .legend h3 {{
+            margin: 0 0 10px 0;
+            color: #333;
+        }}
+        .legend-item {{
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }}
+        .legend-color {{
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📄 Text Content Changes</h1>
+        <p>Comparing webpage text content between versions</p>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <h3>Site</h3>
+            <div class="number">{site_name}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Previous Version</h3>
+            <div class="number">{Path(old_file).stem}</div>
+        </div>
+        <div class="stat-card">
+            <h3>New Version</h3>
+            <div class="number">{date_str}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Content Sections</h3>
+            <div class="number">{old_count} → {new_count}</div>
+        </div>
+    </div>
+    
+    <div class="diff-container">
+        {diff_html}
+    </div>
+    
+    <div class="legend">
+        <h3>📋 Legend</h3>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #e8f5e8;"></div>
+            <span>Added content (green)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ffeaea;"></div>
+            <span>Removed content (red)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #fff3cd;"></div>
+            <span>Changed content (yellow)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #f8f9fa;"></div>
+            <span>Unchanged content (gray)</span>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        return enhanced_html
     
     def process_url(self, url_info):
         """Process a single URL: fetch, save, and create diff."""
