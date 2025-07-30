@@ -93,14 +93,24 @@ class WebpageTracker:
             return []
     
     def get_site_name(self, url_info):
-        """Generate site name based on number and language structure."""
+        """Generate site name based on number, language, and URL structure."""
         try:
             number = url_info['number']
             language = url_info['language']
             url_type = url_info['type']
+            url = url_info['url']
             
-            # Create folder structure: number/language_type
-            site_name = f"{number:02d}/{language}_{url_type}"
+            # Extract domain and path from URL
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc.replace('.', '-')
+            path = parsed.path.strip('/').replace('/', '-')
+            
+            # Create URL-based folder name
+            url_folder = f"{domain}-{path}" if path else domain
+            
+            # Create folder structure: number/language_type/url_folder
+            site_name = f"{number:02d}/{language}_{url_type}/{url_folder}"
             
             return site_name
             
