@@ -73,6 +73,13 @@ else
     fi
 fi
 
+# Fix webpagesv2.xlsx if it's a directory (common git issue)
+if [ -d "webpagesv2.xlsx" ]; then
+    log_message "${YELLOW}Fixing webpagesv2.xlsx directory issue...${NC}"
+    rm -rf webpagesv2.xlsx
+    git checkout HEAD -- webpagesv2.xlsx
+fi
+
 # Create sample Excel file if it doesn't exist
 if [ ! -f "webpagesv2.xlsx" ]; then
     log_message "${YELLOW}Creating sample Excel file...${NC}"
