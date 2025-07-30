@@ -1,6 +1,7 @@
 # Webpage versions and diffs
 webpage_versions/
 diffs/
+translation_references/
 
 # Python cache
 __pycache__/
