@@ -5,7 +5,7 @@ services:
     build: .
     container_name: webpage-tracker
     volumes:
-      - ./webpages.xlsx:/app/webpages.xlsx:ro
+      - ./webpagesv2.xlsx:/app/webpages.xlsx:ro
       - ./webpage_versions:/app/webpage_versions
       - ./diffs:/app/diffs
       - ./logs:/app/logs
@@ -39,7 +39,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./webpages.xlsx:/app/webpages.xlsx:ro
+      - ./webpagesv2.xlsx:/app/webpages.xlsx:ro
       - ./webpage_versions:/app/webpage_versions
       - ./diffs:/app/diffs
       - ./logs:/app/logs
@@ -62,7 +62,7 @@ services:
       dockerfile: automation/Dockerfile.automation
     container_name: webtracker-automation
     volumes:
-      - ./webpages.xlsx:/opt/webtracker/webpages.xlsx:ro
+      - ./webpagesv2.xlsx:/opt/webtracker/webpages.xlsx:ro
       - ./webpage_versions:/opt/webtracker/webpage_versions
       - ./diffs:/opt/webtracker/diffs
       - ./logs:/opt/webtracker/logs
