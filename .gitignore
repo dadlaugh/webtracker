@@ -27,10 +27,11 @@ ENV/
 *.log
 logs/
 
-# Excel files (ignore user data, but keep webpages.xlsx)
+# Excel files (ignore user data, but keep webpages.xlsx and webpagesv2.xlsx)
 *.xlsx
 *.xls
 !webpages.xlsx
+!webpagesv2.xlsx
 
 # IDE files
 .vscode/
