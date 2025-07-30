@@ -20,7 +20,7 @@ NC='\033[0m' # No Color
 
 # Function to log messages
 log_message() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $1" | tee -a "$LOG_FILE"
 }
 
 # Function to check if Docker is running
@@ -62,7 +62,7 @@ run_tracker() {
         -v $(pwd)/webpage_versions:/app/webpage_versions \
         -v $(pwd)/diffs:/app/diffs \
         -v $(pwd)/logs:/app/logs \
-        webpage-tracker; then
+        webtracker_web-server; then
         log_message "${GREEN}Morning webpage tracker completed successfully${NC}"
         return 0
     else

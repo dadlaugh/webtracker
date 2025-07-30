@@ -14,7 +14,7 @@ NC='\033[0m'
 
 # Function to log messages
 log_message() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $1"
 }
 
 # Function to start cron daemon
@@ -65,6 +65,12 @@ check_environment() {
     if [ ! -S /var/run/docker.sock ]; then
         log_message "${YELLOW}Warning: Docker socket not found${NC}"
         log_message "${YELLOW}Make sure to mount /var/run/docker.sock as a volume${NC}"
+    fi
+    
+    # Create environment file if it doesn't exist
+    if [ ! -f "$PROJECT_DIR/.environment" ]; then
+        log_message "${YELLOW}Creating environment file...${NC}"
+        echo "production" > "$PROJECT_DIR/.environment"
     fi
 }
 

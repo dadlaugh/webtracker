@@ -1,19 +1,6 @@
 version: '3.8'
 
 services:
-  webpage-tracker:
-    build: .
-    container_name: webpage-tracker
-    volumes:
-      - ./webpagesv2.xlsx:/app/webpages.xlsx:ro
-      - ./webpage_versions:/app/webpage_versions
-      - ./diffs:/app/diffs
-      - ./logs:/app/logs
-    environment:
-      - PYTHONUNBUFFERED=1
-    command: python webpage_tracker.py
-    profiles:
-      - tracker
 
   web-server:
     build: .
@@ -35,7 +22,7 @@ services:
   # Tracker service (one-time execution)
   tracker:
     build: .
-    container_name: webpage-tracker
+    container_name: webpage-tracker-run
     volumes:
       - ./webpagesv2.xlsx:/app/webpages.xlsx:ro
       - ./webpage_versions:/app/webpage_versions
@@ -62,7 +49,7 @@ services:
       - ./scripts/morning_tracker.sh:/opt/webtracker/morning_tracker.sh:ro
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - TZ=UTC
+      - TZ=Australia/Sydney
     restart: unless-stopped
     profiles:
       - automation 

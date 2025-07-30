@@ -9,8 +9,8 @@ RUN apk add --no-cache \
     tzdata \
     cronie
 
-# Set timezone
-ENV TZ=UTC
+# Set timezone to Sydney
+ENV TZ=Australia/Sydney
 
 # Create app directory
 WORKDIR /app
@@ -25,7 +25,8 @@ RUN chmod +x /app/auto_update.sh /app/morning_tracker.sh /app/automation_entrypo
 
 # Create cron jobs
 RUN echo "0 9 * * * /app/morning_tracker.sh" > /etc/crontabs/root && \
-    echo "*/5 * * * * /app/auto_update.sh" >> /etc/crontabs/root
+    echo "*/5 * * * * /app/auto_update.sh" >> /etc/crontabs/root && \
+    echo "0 0 * * * echo 'Cron is working' >> /app/cron_test.log"
 
 # Expose port for health checks
 EXPOSE 8080
