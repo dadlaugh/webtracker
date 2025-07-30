@@ -143,6 +143,7 @@ def index():
                 <a href="/">📊 Dashboard</a>
                 <a href="/versions">📁 Versions</a>
                 <a href="/diffs">🔄 Diffs</a>
+                <a href="/archive">📦 Archive</a>
                 <a href="/logs">📋 Logs</a>
             </div>
             
@@ -485,6 +486,128 @@ def logs():
     '''
     
     return render_template_string(html, files=log_files)
+
+@app.route('/archive')
+def archive():
+    """Display archived historical data."""
+    html = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Historical Archive - Webpage Tracker</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+            .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #333; text-align: center; margin-bottom: 30px; }
+            .nav { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
+            .nav a { padding: 12px 24px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+            .nav a:hover { background: #0056b3; }
+            .archive-info { background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+            .archive-info h3 { color: #856404; margin-top: 0; }
+            .file-list { list-style: none; padding: 0; }
+            .file-item { padding: 15px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 5px; background: #f9f9f9; }
+            .file-item:hover { background: #f0f0f0; }
+            .file-name { font-weight: bold; color: #007bff; }
+            .file-info { color: #666; font-size: 0.9em; margin-top: 5px; }
+            .file-path { font-family: monospace; background: #f8f9fa; padding: 5px; border-radius: 3px; }
+            .no-archive { text-align: center; color: #666; font-style: italic; padding: 40px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📦 Historical Archive</h1>
+            
+            <div class="nav">
+                <a href="/">📊 Dashboard</a>
+                <a href="/versions">📁 Versions</a>
+                <a href="/diffs">🔄 Diffs</a>
+                <a href="/archive">📦 Archive</a>
+                <a href="/logs">📋 Logs</a>
+            </div>
+            
+            <div class="archive-info">
+                <h3>📋 Archive Information</h3>
+                <p>This page displays historical data that was archived before implementing the new Excel-based structure. 
+                The archive preserves the old domain-based organization for reference purposes.</p>
+            </div>
+    '''
+    
+    # Find archive directories
+    archive_dirs = []
+    for item in Path('.').iterdir():
+        if item.is_dir() and item.name.startswith('historical_archive_'):
+            archive_dirs.append(item)
+    
+    if not archive_dirs:
+        html += '''
+            <div class="no-archive">
+                <h3>📦 No Historical Archives Found</h3>
+                <p>No historical archives have been created yet. Historical data will appear here after running the hybrid deployment.</p>
+            </div>
+        '''
+    else:
+        # Sort archives by creation time (newest first)
+        archive_dirs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        for archive_dir in archive_dirs:
+            archive_name = archive_dir.name
+            archive_date = datetime.fromtimestamp(archive_dir.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            
+            html += f'''
+                <div class="section">
+                    <h2>📦 {archive_name}</h2>
+                    <p><strong>Created:</strong> {archive_date}</p>
+            '''
+            
+            # Show archived webpage versions
+            archive_versions_dir = archive_dir / 'webpage_versions'
+            if archive_versions_dir.exists():
+                html += '<h3>📁 Archived Webpage Versions</h3><ul class="file-list">'
+                
+                for version_file in archive_versions_dir.rglob('*.html'):
+                    file_info = get_file_info(version_file)
+                    html += f'''
+                        <li class="file-item">
+                            <div class="file-name">
+                                <a href="/file/{file_info['path']}" target="_blank">{file_info['name']}</a>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-path">📁 {file_info['path']}</div>
+                                📏 {file_info['size']} | 🕒 {file_info['modified']}
+                            </div>
+                        </li>
+                    '''
+                html += '</ul>'
+            
+            # Show archived diffs
+            archive_diffs_dir = archive_dir / 'diffs'
+            if archive_diffs_dir.exists():
+                html += '<h3>🔄 Archived Diffs</h3><ul class="file-list">'
+                
+                for diff_file in archive_diffs_dir.rglob('*.html'):
+                    file_info = get_file_info(diff_file)
+                    html += f'''
+                        <li class="file-item">
+                            <div class="file-name">
+                                <a href="/file/{file_info['path']}" target="_blank">{file_info['name']}</a>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-path">📁 {file_info['path']}</div>
+                                📏 {file_info['size']} | 🕒 {file_info['modified']}
+                            </div>
+                        </li>
+                    '''
+                html += '</ul>'
+            
+            html += '</div>'
+    
+    html += '''
+        </div>
+    </body>
+    </html>
+    '''
+    
+    return html
 
 @app.route('/file/<path:filepath>')
 def serve_file(filepath):
