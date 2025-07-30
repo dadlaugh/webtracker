@@ -615,8 +615,4 @@ def serve_file(filepath):
     return send_from_directory('.', filepath)
 
 if __name__ == '__main__':
-    print("🌐 Starting Webpage Tracker Web Server...")
-    print("📱 Access your files at: http://localhost:8080")
-    print("🌍 For remote access: http://your-server-ip:8080")
-    print("⏹️  Press Ctrl+C to stop the server")
     app.run(host='0.0.0.0', port=8080, debug=False) 

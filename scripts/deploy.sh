@@ -56,7 +56,7 @@ fi
 
 # Build Docker image
 log_message "${YELLOW}Building Docker image...${NC}"
-docker build -t webpage-tracker .
+docker build -t webtracker_web-server .
 
 # Create necessary directories
 mkdir -p webpage_versions diffs logs
@@ -67,7 +67,7 @@ docker run --rm \
     -v "$(pwd)/webpagesv2.xlsx:/app/webpages.xlsx:ro" \
     -v "$(pwd)/webpage_versions:/app/webpage_versions" \
     -v "$(pwd)/diffs:/app/diffs" \
-    webpage-tracker
+    webtracker_web-server
 
 log_message "${GREEN}Deployment completed successfully!${NC}"
 

@@ -138,7 +138,7 @@ pull_latest_changes() {
     
     # Rebuild Docker image with latest code
     log_message "Rebuilding Docker image with latest code..."
-    if ! docker build -t webpage-tracker .; then
+    if ! docker build -t webtracker_web-server .; then
         log_message "${RED}Failed to rebuild Docker image${NC}"
         return 1
     fi

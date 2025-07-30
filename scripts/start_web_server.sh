@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 
 # Always build the Docker image to ensure it's up to date
 echo "🔨 Building Docker image..."
-if ! docker build -t webpage-tracker .; then
+if ! docker build -t webtracker_web-server .; then
     echo "❌ Failed to build Docker image"
     exit 1
 fi
@@ -32,7 +32,7 @@ if ! docker run -d \
     -v "$(pwd)/logs:/app/logs:ro" \
     -v "$(pwd)/web_server.py:/app/web_server.py:ro" \
     -e PYTHONUNBUFFERED=1 \
-    webpage-tracker \
+    webtracker_web-server \
     python web_server.py; then
     echo "❌ Failed to start web server container"
     exit 1
