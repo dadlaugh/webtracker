@@ -49,7 +49,7 @@ else
 fi
 
 # Create sample Excel file if it doesn't exist
-if [ ! -f "webpages.xlsx" ]; then
+if [ ! -f "webpagesv2.xlsx" ]; then
     log_message "${YELLOW}Creating sample Excel file...${NC}"
     python3 create_sample_excel_simple.py
 fi
@@ -64,7 +64,7 @@ mkdir -p webpage_versions diffs logs
 # Run the container
 log_message "${YELLOW}Running webpage tracker...${NC}"
 docker run --rm \
-    -v "$(pwd)/webpages.xlsx:/app/webpages.xlsx:ro" \
+    -v "$(pwd)/webpagesv2.xlsx:/app/webpages.xlsx:ro" \
     -v "$(pwd)/webpage_versions:/app/webpage_versions" \
     -v "$(pwd)/diffs:/app/diffs" \
     webpage-tracker
@@ -79,6 +79,6 @@ echo -e "Webpage Versions: $(ls -1 webpage_versions/*/ 2>/dev/null | wc -l) site
 echo -e "Diffs Generated: $(ls -1 diffs/*/ 2>/dev/null | wc -l) sites with diffs"
 echo ""
 echo -e "${YELLOW}Next Steps:${NC}"
-echo -e "1. Edit webpages.xlsx to add your URLs"
+echo -e "1. Edit webpagesv2.xlsx to add your URLs"
 echo -e "2. Run this script again to update tracking"
 echo -e "3. Set up auto-updates: see REMOTE_DOCKER_DEPLOYMENT.md" 

@@ -154,7 +154,7 @@ run_tracker() {
     cd "$PROJECT_DIR"
     
     if docker run --rm \
-        -v $(pwd)/webpages.xlsx:/app/webpages.xlsx:ro \
+        -v $(pwd)/webpagesv2.xlsx:/app/webpages.xlsx:ro \
         -v $(pwd)/webpage_versions:/app/webpage_versions \
         -v $(pwd)/diffs:/app/diffs \
         -v $(pwd)/logs:/app/logs \

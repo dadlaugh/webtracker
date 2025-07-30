@@ -31,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class WebpageTracker:
-    def __init__(self, excel_file='webpagesv2.xlsx'):
+    def __init__(self, excel_file='webpages.xlsx'):
         self.excel_file = excel_file
         self.webpage_versions_dir = Path('webpage_versions')
         self.diffs_dir = Path('diffs')
